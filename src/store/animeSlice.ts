@@ -1,6 +1,26 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { jikanApi } from '@/services/jikanApi';
-import { Anime, AnimeCharacter } from '@/types/anime';
+import { Anime, AnimeCharacter, SearchFilters } from '@/types/anime';
+
+// Local storage helpers
+const FAVORITES_KEY = 'anime_favorites';
+
+const loadFavoritesFromStorage = (): number[] => {
+  try {
+    const stored = localStorage.getItem(FAVORITES_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveFavoritesToStorage = (favorites: number[]) => {
+  try {
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+  } catch (error) {
+    console.error('Failed to save favorites:', error);
+  }
+};
 
 interface AnimeState {
   searchResults: Anime[];
@@ -11,6 +31,8 @@ interface AnimeState {
   currentPage: number;
   totalPages: number;
   searchQuery: string;
+  favorites: number[];
+  filters: SearchFilters;
 }
 
 const initialState: AnimeState = {
@@ -22,12 +44,14 @@ const initialState: AnimeState = {
   currentPage: 1,
   totalPages: 1,
   searchQuery: '',
+  favorites: loadFavoritesFromStorage(),
+  filters: {},
 };
 
 export const searchAnime = createAsyncThunk(
   'anime/search',
-  async ({ query, page }: { query: string; page: number }, { signal }) => {
-    const response = await jikanApi.searchAnime(query, page);
+  async ({ query, page, filters }: { query: string; page: number; filters?: SearchFilters }, { signal }) => {
+    const response = await jikanApi.searchAnime(query, page, filters);
     
     // Check if the request was cancelled
     if (signal.aborted) {
@@ -64,6 +88,21 @@ const animeSlice = createSlice({
     clearSelectedAnime: (state) => {
       state.selectedAnime = null;
       state.characters = [];
+    },
+    toggleFavorite: (state, action: PayloadAction<number>) => {
+      const animeId = action.payload;
+      const index = state.favorites.indexOf(animeId);
+      
+      if (index > -1) {
+        state.favorites.splice(index, 1);
+      } else {
+        state.favorites.push(animeId);
+      }
+      
+      saveFavoritesToStorage(state.favorites);
+    },
+    setFilters: (state, action: PayloadAction<SearchFilters>) => {
+      state.filters = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -109,5 +148,5 @@ const animeSlice = createSlice({
   },
 });
 
-export const { setSearchQuery, clearSelectedAnime } = animeSlice.actions;
+export const { setSearchQuery, clearSelectedAnime, toggleFavorite, setFilters } = animeSlice.actions;
 export default animeSlice.reducer;

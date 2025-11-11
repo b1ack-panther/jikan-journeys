@@ -1,25 +1,42 @@
-import { useEffect } from 'react';
+import { useMemo, useCallback } from 'react';
 import { SearchBar } from '@/components/SearchBar';
 import { AnimeCard } from '@/components/AnimeCard';
+import { FilterBar } from '@/components/FilterBar';
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { Pagination } from '@/components/Pagination';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { searchAnime } from '@/store/animeSlice';
+import { searchAnime, setFilters } from '@/store/animeSlice';
+import { SearchFilters } from '@/types/anime';
 import heroImage from '@/assets/anime-hero.jpg';
-import { Search as SearchIcon } from 'lucide-react';
+import { Search as SearchIcon, Heart } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const Search = () => {
   const dispatch = useAppDispatch();
-  const { searchResults, loading, currentPage, totalPages, searchQuery } = useAppSelector(
+  const { searchResults, loading, currentPage, totalPages, searchQuery, filters, favorites } = useAppSelector(
     (state) => state.anime
   );
 
-  const handlePageChange = (page: number) => {
+  const handlePageChange = useCallback((page: number) => {
     if (searchQuery) {
-      dispatch(searchAnime({ query: searchQuery, page }));
+      dispatch(searchAnime({ query: searchQuery, page, filters }));
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  };
+  }, [searchQuery, filters, dispatch]);
+
+  const handleFiltersChange = useCallback((newFilters: SearchFilters) => {
+    dispatch(setFilters(newFilters));
+    if (searchQuery) {
+      dispatch(searchAnime({ query: searchQuery, page: 1, filters: newFilters }));
+    }
+  }, [searchQuery, dispatch]);
+
+  // Memoize filtered results to show favorites
+  const displayResults = useMemo(() => {
+    return searchResults;
+  }, [searchResults]);
+
+  const favoriteCount = useMemo(() => favorites.length, [favorites.length]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -43,9 +60,20 @@ const Search = () => {
 
       {/* Results Section */}
       <div className="container mx-auto px-4 py-12">
+        {searchQuery && <FilterBar filters={filters} onFiltersChange={handleFiltersChange} />}
+        
+        {favoriteCount > 0 && (
+          <div className="mb-6 flex items-center gap-2 text-muted-foreground">
+            <Heart className="h-4 w-4 fill-primary text-primary" />
+            <span className="text-sm">
+              {favoriteCount} {favoriteCount === 1 ? 'favorite' : 'favorites'} saved
+            </span>
+          </div>
+        )}
+
         {loading ? (
           <LoadingSkeleton />
-        ) : searchResults.length > 0 ? (
+        ) : displayResults.length > 0 ? (
           <>
             <div className="mb-6">
               <h2 className="text-2xl font-bold">
@@ -56,7 +84,7 @@ const Search = () => {
               </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-              {searchResults.map((anime) => (
+              {displayResults.map((anime) => (
                 <AnimeCard key={anime.mal_id} anime={anime} />
               ))}
             </div>

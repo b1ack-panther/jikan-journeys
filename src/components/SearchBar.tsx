@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { useAppDispatch } from '@/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { searchAnime, setSearchQuery } from '@/store/animeSlice';
 
 const DEBOUNCE_DELAY = 250;
@@ -9,8 +9,24 @@ const DEBOUNCE_DELAY = 250;
 export const SearchBar = () => {
   const [localQuery, setLocalQuery] = useState('');
   const dispatch = useAppDispatch();
+  const filters = useAppSelector((state) => state.anime.filters);
   const abortControllerRef = useRef<AbortController | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const performSearch = useCallback((query: string) => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    abortControllerRef.current = new AbortController();
+    
+    dispatch(setSearchQuery(query));
+    dispatch(searchAnime({ 
+      query, 
+      page: 1,
+      filters
+    }));
+  }, [dispatch, filters]);
 
   useEffect(() => {
     // Cancel any pending requests
@@ -26,14 +42,7 @@ export const SearchBar = () => {
     // Only search if query is not empty
     if (localQuery.trim()) {
       timeoutRef.current = setTimeout(() => {
-        // Create new abort controller for this request
-        abortControllerRef.current = new AbortController();
-        
-        dispatch(setSearchQuery(localQuery));
-        dispatch(searchAnime({ 
-          query: localQuery, 
-          page: 1 
-        }));
+        performSearch(localQuery);
       }, DEBOUNCE_DELAY);
     }
 
@@ -45,7 +54,7 @@ export const SearchBar = () => {
         abortControllerRef.current.abort();
       }
     };
-  }, [localQuery, dispatch]);
+  }, [localQuery, performSearch]);
 
   return (
     <div className="relative w-full max-w-2xl">

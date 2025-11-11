@@ -150,3 +150,10 @@ export interface AnimeDetailResponse {
 export interface CharactersResponse {
   data: AnimeCharacter[];
 }
+
+export interface SearchFilters {
+  genres?: number[];
+  minScore?: number;
+  maxScore?: number;
+  rating?: string;
+}
