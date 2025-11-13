@@ -46,16 +46,11 @@ endpoint - /top/anime?limit=&page=
 ## Prompt 5: Persist Search Query Across Navigation
 **Prompt**
 ```
-When navigating back from an anime detail page to the search list, the search query is lost and the results disappear. How can I persist the search query and displayed results when returning to the search page?
+When navigating back from an anime detail page to the search list, the search query is lost and the results disappear. Persist the query by adding it search param in address URL
 ```
 **Helped With**
 - Synced search input with URL `search` param; restored query on back/forward.
 
-## Prompt 6: Avoid Unnecessary Refetch on Back
-**Prompt**
-```
-After returning to the search list from a detail page, the list reloads/refreshes even if the search query hasn't changed. How can I prevent this redundant fetching behavior to improve performance and user experience?
-```
-**Helped With**
-- Guarded SearchBar to skip dispatch if query unchanged and results exist.
-
+## Bonus Implementations
+- Implemented filtering on genre, rating, and score range.
+- Implemented adding and saving favorite animes.
